@@ -1,0 +1,9 @@
+.Plug {
+  margin-left: auto;
+  margin-right: auto;
+  margin-top: 50px;
+  width: 600px;
+  height: 400px;
+  background-position: center;
+  background-size: cover;
+}
