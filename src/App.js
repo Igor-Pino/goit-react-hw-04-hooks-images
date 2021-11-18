@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect  } from 'react';
 import 'react-loader-spinner/dist/loader/css/react-spinner-loader.css';
 import Loader from 'react-loader-spinner';
 import s from './App.module.css';
@@ -10,93 +10,100 @@ import Modal from './components/Modal';
 
 import Plug from './components/Plug';
 
-class App extends Component {
-  state = {
-    searchQuery: '',
-    images: [],
-    largeImage: '',
-    page: 1,
-    isLoading: false,
-    showModal: false,
-    error: '',
-    amount: '',
-  };
+function App (query) {
+ 
+  const[searchQuery, setSearchQuery] = useState('');
+  const[images, setImages] = useState([]);
+  const[largeImage, setLargeImage] = useState('');
+  const[page, setPage] = useState(1);
+  const[isLoading, setIsLoading] = useState(false);
+  const[showModal, setShowModal] = useState(false);
+  const[error, setError] = useState('');
+  const[amount, setAmount] = useState('');
+ 
 
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.searchQuery !== this.state.searchQuery) {
-      this.reset();
-      this.fetchImages();
-    }
-    if (this.state.page !== 2 && prevState.page !== this.state.page) {
-      window.scrollTo({
-        top: document.documentElement.scrollHeight,
-        behavior: 'smooth',
-      });
-    }
-  }
 
-  reset = () => {
-    this.setState({ images: [], page: 1 });
-  };
+  useEffect(()=> {
+        if (!searchQuery) {
+        return;
+        }
 
-  fetchImages = () => {
-    const { page, searchQuery } = this.state;
-
-    this.setState({ isLoading: true });
-
-    fetchApi({ page, searchQuery })
-      .then(images => {
-        this.setState(prevState => ({
-          images: [...prevState.images, ...images],
-          page: prevState.page + 1,
-          amount: images.length,
-        }));
+    const fetchImages = () => {   
+      setIsLoading(true);
+      fetchApi({ page, searchQuery })
+      .then(responseImages => {setImages (prevImages => [...prevImages, ...responseImages]); 
+        setAmount(responseImages.length);
+        if (page > 1) {
+          window.scrollTo({
+            top: document.documentElement.scrollHeight,
+            behavior: "smooth",
+          });
+        }        
       })
-      .catch(error => this.setState({ error: 'Picture not found' }))
-      .finally(() => this.setState({ isLoading: false }));
+      .catch(error => setError(error.message ))
+      .finally(() => setIsLoading(false));
+     
+    };
+     fetchImages()
+   
+   
+
+    
+  }, [searchQuery, page])
+
+
+
+  const updatePage = () => {
+    
+    setPage(prevPage => prevPage + 1);
+  
   };
 
-  handlerSearcQuery = ({ query }) => {
-    this.setState({ searchQuery: query });
+  const handlerSearcQuery = (query) => {
+    setSearchQuery(query);
+    setImages([]);
+    setPage(1)
   };
 
-  toggleModal = () => {
-    this.setState(state => ({
-      showModal: !state.showModal,
-    }));
+  const toggleModal = () => {
+    setShowModal(prev => !prev);
   };
 
-  getLargeImage = (largeImage = '') => {
-    this.setState({ largeImage });
-
-    this.toggleModal();
+  const getLargeImage = (largeImage = '') => {
+    setLargeImage(largeImage);
+    toggleModal();
   };
 
-  render() {
-    const { images, showModal, largeImage, isLoading, amount, page } = this.state;
+
+
+  const shouldRenderLoadMoreButton = amount > 11 && !isLoading;
+  const shouldShowPlag = amount === 0 && page !== 2 && !isLoading;
+
 
     return (
       <div>
-        <SearchBar handlerSearcQuery={this.handlerSearcQuery} />
+        <SearchBar handlerSearcQuery={handlerSearcQuery} />
 
-        {images.length === 0 && !isLoading && page !== 1 && <Plug />}
+        {error && (<h2>Error</h2>)}
 
-        <ImageGallery images={images} getLargeImage={this.getLargeImage} />
+        {shouldShowPlag && (<Plug />)}
+
+        <ImageGallery images={images} getLargeImage={getLargeImage} />
 
         {isLoading && (
           <Loader className={s.Loader} type="ThreeDots" color="#0e0e86" height={80} width={80} />
         )}
 
-        {amount >= 11 && !isLoading && <Button loadMore={this.fetchImages} />}
+        {shouldRenderLoadMoreButton && (<Button loadMore={updatePage} />)}
 
         {showModal && (
-          <Modal showModal={this.getLargeImage}>
+          <Modal showModal={getLargeImage}>
             <img src={largeImage} alt="" />
           </Modal>
         )}
       </div>
     );
-  }
+  
 }
 
 export default App;
